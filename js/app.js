@@ -11,7 +11,8 @@ let selectedPhoto = "";
 
 function getRoute() {
   const hash = window.location.hash.replace(/^#\/?/, "");
-  const [page, id] = hash.split("/");
+  const [route] = hash.split("?");
+  const [page, id] = route.split("/");
   return { page: page || "home", id };
 }
 

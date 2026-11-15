@@ -16,6 +16,14 @@ function hasCompletedOnboarding() {
   }
 }
 
+function isPreviewMode() {
+  const hashQuery = window.location.hash.split("?")[1] || "";
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(hashQuery);
+  return searchParams.get("onboarding") === "preview"
+    || hashParams.get("onboarding") === "preview";
+}
+
 function markOnboardingCompleted() {
   try {
     window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
@@ -57,7 +65,7 @@ function createOnboardingElement(imageSources) {
   return overlay;
 }
 
-function createSlideController(overlay, imageSources, finish) {
+function createSlideController(overlay, imageSources, finish, shouldPersist) {
   const image = overlay.querySelector(".onboarding-image");
   const dots = [...overlay.querySelectorAll(".onboarding-dot")];
   const skipButton = overlay.querySelector(".onboarding-skip");
@@ -102,7 +110,9 @@ function createSlideController(overlay, imageSources, finish) {
 
   function complete() {
     window.clearTimeout(timerId);
-    markOnboardingCompleted();
+    if (shouldPersist) {
+      markOnboardingCompleted();
+    }
     finish();
   }
 
@@ -118,7 +128,9 @@ function createSlideController(overlay, imageSources, finish) {
 }
 
 export async function showOnboarding() {
-  if (hasCompletedOnboarding()) {
+  const preview = isPreviewMode();
+
+  if (!preview && hasCompletedOnboarding()) {
     return;
   }
 
@@ -130,8 +142,11 @@ export async function showOnboarding() {
     await new Promise((resolve) => {
       createSlideController(overlay, imageSources, () => {
         overlay.remove();
+        if (preview) {
+          window.location.hash = "#/home";
+        }
         resolve();
-      });
+      }, !preview);
     });
   } catch (error) {
     console.warn("Onboarding images could not be loaded", error);
