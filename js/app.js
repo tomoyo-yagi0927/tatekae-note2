@@ -1,5 +1,6 @@
 import { deleteReceipt, getAllReceipts, getReceipt, saveReceipt } from "./db.js";
 import { emptyStateTemplate, escapeHtml, formatCurrency, formatDate, formatDateTime, receiptCardTemplate } from "./ui.js";
+import { recognizeReceipt } from "./ocr.js";
 
 const app = document.querySelector("#app");
 const modalRoot = document.querySelector("#modal-root");
@@ -57,20 +58,56 @@ async function renderHome() {
   const total = unpaid.reduce((sum, receipt) => sum + receipt.amount, 0);
   const recent = receipts.slice(0, 3);
 
-  app.innerHTML = `<section>
-    <div class="hero-card">
-      <p class="eyebrow">立て替えたお金を、かんたんに記録・管理</p>
-      <h1>タテカエNOTE</h1>
-      <p class="hero-description">自分のための立替金メモ。レシート写真も端末内に保存できます。</p>
-      <div class="balance-label">現在の立て替え金額（未精算合計）</div>
-      <div class="balance">¥${formatCurrency(total)}<small>円</small></div>
-      <a class="button full" href="#/new">▣ レシートを登録する</a>
+  app.innerHTML = `<section class="home-page">
+    <div class="home-brand" aria-label="タテカエNOTE">
+      <div class="home-brand-main">
+        <svg class="home-receipt-icon" viewBox="0 0 48 58" aria-hidden="true">
+          <path d="M8 4h32v48l-5-4-5 4-5-4-5 4-5-4-7 4V4Z" />
+          <path d="M16 18h16M16 28h16M16 38h11" />
+        </svg>
+        <span>タテカエNOTE</span>
+      </div>
+      <span class="home-brand-line" aria-hidden="true"></span>
+      <p>立て替えたお金を、かんたんに記録・管理</p>
     </div>
-    <div class="section-heading">
-      <h2>登録レシート</h2>
-      <a class="text-link" href="#/receipts">一覧を見る ›</a>
+
+    <div class="home-balance-card">
+      <div class="home-balance-label">現在の立て替え金額（未精算の合計）</div>
+      <div class="home-balance-content">
+        <svg class="home-coins-icon" viewBox="0 0 52 48" aria-hidden="true">
+          <ellipse cx="35" cy="10" rx="13" ry="5" />
+          <path d="M22 10v9c0 3 6 5 13 5s13-2 13-5v-9" />
+          <path d="M22 19c0 3 6 5 13 5s13-2 13-5M22 27c0 3 6 5 13 5s13-2 13-5v-8" />
+          <ellipse cx="17" cy="26" rx="13" ry="5" />
+          <path d="M4 26v10c0 3 6 5 13 5s13-2 13-5v-10M4 36c0 3 6 5 13 5s13-2 13-5" />
+        </svg>
+        <div class="home-balance">¥${formatCurrency(total)}</div>
+      </div>
     </div>
-    ${recent.length ? `<div class="receipt-list">${recent.map(receiptCardTemplate).join("")}</div>` : emptyStateTemplate("まだレシートがありません", "最初のレシートを登録", "#/new")}
+
+    <a class="home-action-card" href="#/receipts">
+      <svg class="home-action-icon" viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="8" cy="12" r="3" />
+        <circle cx="8" cy="24" r="3" />
+        <circle cx="8" cy="36" r="3" />
+        <path d="M17 12h23M17 24h23M17 36h23" />
+      </svg>
+      <span class="home-action-copy"><strong>登録レシート</strong><small>登録したレシートの一覧を見る</small></span>
+      <span class="home-action-arrow" aria-hidden="true">›</span>
+    </a>
+
+    <a class="home-register-button" href="#/new">
+      <svg class="home-camera-icon" viewBox="0 0 48 40" aria-hidden="true">
+        <path d="M15 9 19 4h10l4 5h7c2 0 4 2 4 4v19c0 2-2 4-4 4H8c-2 0-4-2-4-4V13c0-2 2-4 4-4h7Z" />
+        <circle cx="24" cy="23" r="8" />
+      </svg>
+      <strong>レシートを登録する</strong>
+      <span aria-hidden="true">›</span>
+    </a>
+
+    <div class="home-recent" aria-live="polite">
+      ${recent.length ? `<p class="home-recent-label">最近の登録</p><div class="receipt-list">${recent.map(receiptCardTemplate).join("")}</div>` : ""}
+    </div>
   </section>`;
   bindReceiptCards();
 }
@@ -100,24 +137,64 @@ async function renderReceipts(tab = "unpaid") {
 function renderForm(receipt = null) {
   selectedPhoto = receipt?.photo || "";
   const isEdit = Boolean(receipt);
-  app.innerHTML = `<section>
-    <p class="eyebrow">${isEdit ? "レシートを編集" : "新しい記録"}</p>
-    <h1>${isEdit ? "レシートを編集" : "レシートを登録"}</h1>
-    <form id="receipt-form" class="card form-card">
-      <div class="form-field"><label for="receipt-name">申請名 <span class="required">必須</span></label><input id="receipt-name" name="name" required maxlength="80" value="${escapeHtml(receipt?.name || "")}" placeholder="例：備品の購入"></div>
-      <div class="form-field"><label for="used-date">利用日 <span class="required">必須</span></label><input id="used-date" name="usedDate" type="date" required value="${receipt?.usedDate || today()}"></div>
-      <div class="form-field"><label for="amount">金額 <span class="required">必須</span></label><input id="amount" name="amount" type="number" min="1" step="1" required value="${receipt?.amount || ""}" placeholder="例：1280"><small class="muted">1円以上で入力してください。</small></div>
-      <div class="form-field"><label for="note">備考</label><textarea id="note" name="note" maxlength="500" placeholder="メモを入力（任意）">${escapeHtml(receipt?.note || "")}</textarea></div>
-      <div class="form-field"><label>写真添付</label><div class="photo-picker"><div class="photo-preview" id="photo-preview">${selectedPhoto ? `<img src="${selectedPhoto}" alt="レシート写真のプレビュー">` : "写真を追加できます"}</div><input id="photo" type="file" accept="image/*" capture="environment"><button class="button-ghost" id="remove-photo" type="button" ${selectedPhoto ? "" : "hidden"}>写真を削除</button></div></div>
-      <div class="button-row"><a class="button-ghost" href="${isEdit ? `#/receipt/${receipt.id}` : "#/home"}">キャンセル</a><button class="button" type="submit">保存する</button></div>
+  app.innerHTML = `<section class="receipt-register-page">
+    <div class="form-page-titlebar">
+      <a class="form-back-link" href="${isEdit ? `#/receipt/${receipt.id}` : "#/home"}" aria-label="戻る">‹</a>
+      <h1>${isEdit ? "レシートを編集" : "レシートを登録"}</h1>
+      <span aria-hidden="true"></span>
+    </div>
+    <form id="receipt-form" class="receipt-register-form">
+      <div class="register-field">
+        <label for="receipt-name">申請名 <span class="required">必須</span></label>
+        <input id="receipt-name" name="name" required maxlength="80" value="${escapeHtml(receipt?.name || "")}" placeholder="例：備品の購入、金曜のお飲み物 など">
+      </div>
+      <div class="register-field">
+        <label for="used-date">利用日 <span class="required">必須</span></label>
+        <input id="used-date" name="usedDate" type="date" required value="${receipt?.usedDate || ""}">
+      </div>
+      <div class="register-field">
+        <label for="amount">金額 <span class="required">必須</span></label>
+        <div class="register-input-with-prefix">
+          <span aria-hidden="true">¥</span>
+          <input id="amount" name="amount" type="number" min="1" step="1" required value="${receipt?.amount || ""}" placeholder="例：1,280">
+        </div>
+      </div>
+      <div class="register-field">
+        <label for="note">備考 <span class="optional">（任意）</span></label>
+        <textarea id="note" name="note" maxlength="500" placeholder="メモを入力（店舗名、用途など）">${escapeHtml(receipt?.note || "")}</textarea>
+      </div>
+      <div class="register-field register-photo-field">
+        <label>写真添付</label>
+        <div class="register-photo-actions">
+          <label class="photo-source-button" for="photo-camera">
+            <span class="photo-source-icon" aria-hidden="true">▣</span>
+            <strong>カメラで撮影</strong>
+          </label>
+          <label class="photo-source-button" for="photo-gallery">
+            <span class="photo-source-icon" aria-hidden="true">▧</span>
+            <strong>写真から選択</strong>
+          </label>
+          <input class="form-file-input" id="photo-camera" type="file" accept="image/*" capture="environment">
+          <input class="form-file-input" id="photo-gallery" type="file" accept="image/*">
+        </div>
+        <div class="photo-preview${selectedPhoto ? " has-photo" : ""}" id="photo-preview">${selectedPhoto ? `<img src="${selectedPhoto}" alt="レシート写真のプレビュー">` : ""}</div>
+        <button class="photo-remove-button" id="remove-photo" type="button" ${selectedPhoto ? "" : "hidden"} aria-label="写真を削除">×</button>
+      </div>
+      <div class="ocr-panel">
+        <button class="ocr-button" id="run-ocr" type="button" ${selectedPhoto ? "" : "disabled"}>画像から日付・金額を読み取る</button>
+        <p class="ocr-status" id="ocr-status" role="status" aria-live="polite"></p>
+      </div>
+      <button class="register-save-button" type="submit"><span aria-hidden="true">✓</span> 保存する</button>
     </form>
   </section>`;
 
-  document.querySelector("#photo").addEventListener("change", handlePhotoChange);
+  document.querySelector("#photo-camera").addEventListener("change", handlePhotoChange);
+  document.querySelector("#photo-gallery").addEventListener("change", handlePhotoChange);
   document.querySelector("#remove-photo").addEventListener("click", () => {
     selectedPhoto = "";
     updatePhotoPreview();
   });
+  document.querySelector("#run-ocr").addEventListener("click", runOcr);
   document.querySelector("#receipt-form").addEventListener("submit", (event) => saveForm(event, receipt));
 }
 
@@ -138,8 +215,44 @@ function handlePhotoChange(event) {
 function updatePhotoPreview() {
   const preview = document.querySelector("#photo-preview");
   const removeButton = document.querySelector("#remove-photo");
-  preview.innerHTML = selectedPhoto ? `<img src="${selectedPhoto}" alt="レシート写真のプレビュー">` : "写真を追加できます";
+  const ocrButton = document.querySelector("#run-ocr");
+  preview.innerHTML = selectedPhoto ? `<img src="${selectedPhoto}" alt="レシート写真のプレビュー">` : "";
+  preview.classList.toggle("has-photo", Boolean(selectedPhoto));
   removeButton.hidden = !selectedPhoto;
+  ocrButton.disabled = !selectedPhoto;
+}
+
+async function runOcr() {
+  const ocrButton = document.querySelector("#run-ocr");
+  const status = document.querySelector("#ocr-status");
+  const usedDateInput = document.querySelector("#used-date");
+  const amountInput = document.querySelector("#amount");
+
+  if (!selectedPhoto) {
+    return;
+  }
+
+  ocrButton.disabled = true;
+  status.textContent = "読み取り中...";
+  status.className = "ocr-status is-running";
+
+  try {
+    const result = await recognizeReceipt(selectedPhoto, (progress) => {
+      status.textContent = `読み取り中... ${progress}%`;
+    });
+    usedDateInput.value = result.usedDate;
+    amountInput.value = result.amount || "";
+    status.textContent = result.usedDate || result.amount
+      ? "読み取り結果を確認してください。必要に応じて修正できます。"
+      : "日付と合計金額を読み取れませんでした。手入力してください。";
+    status.className = "ocr-status";
+  } catch (error) {
+    status.textContent = "OCRを利用できませんでした。手入力で続けられます。";
+    status.className = "ocr-status is-error";
+    console.warn("OCR failed", error);
+  } finally {
+    ocrButton.disabled = false;
+  }
 }
 
 async function saveForm(event, existingReceipt) {
@@ -255,6 +368,8 @@ async function render() {
     renderDesktopGuide();
   }
   const { page, id } = getRoute();
+  appShell.classList.toggle("home-active", page === "home");
+  appShell.classList.toggle("form-active", page === "new" || page === "edit");
   updateNavigation(page === "receipt" || page === "edit" ? "receipts" : page);
 
   if (page === "home") {
