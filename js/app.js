@@ -1,6 +1,7 @@
 import { deleteReceipt, getAllReceipts, getReceipt, saveReceipt } from "./db.js";
 import { emptyStateTemplate, escapeHtml, formatCurrency, formatDate, formatDateTime, receiptCardTemplate } from "./ui.js";
 import { initializeServiceWorker } from "./cache-control.js";
+import { showOnboarding } from "./onboarding.js";
 
 const app = document.querySelector("#app");
 const modalRoot = document.querySelector("#modal-root");
@@ -359,6 +360,8 @@ async function startApp() {
   if (shouldReload) {
     return;
   }
+
+  await showOnboarding();
 
   render().catch((error) => {
     app.innerHTML = `<div class="card"><h1>読み込みエラー</h1><p class="muted">データベースを開けませんでした。ブラウザの設定を確認してください。</p></div>`;

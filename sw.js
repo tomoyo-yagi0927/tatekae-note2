@@ -1,15 +1,20 @@
-const CACHE_NAME = "tatekae-note-v9";
+const CACHE_NAME = "tatekae-note-v10";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/app.js",
   "./js/cache-control.js",
+  "./js/onboarding.js",
   "./js/db.js",
   "./js/ui.js",
   "./manifest.webmanifest",
   "./assets/icons/icon-192.svg",
-  "./assets/icons/icon-512.svg"
+  "./assets/icons/icon-512.svg",
+  "./assets/onboarding/slide-1.png",
+  "./assets/onboarding/slide-2.png",
+  "./assets/onboarding/slide-3.png",
+  "./assets/onboarding/slide-4.png"
 ];
 
 self.addEventListener("install", (event) => {
