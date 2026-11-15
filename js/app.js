@@ -1,18 +1,12 @@
 import { deleteReceipt, getAllReceipts, getReceipt, saveReceipt } from "./db.js";
 import { emptyStateTemplate, escapeHtml, formatCurrency, formatDate, formatDateTime, receiptCardTemplate } from "./ui.js";
-import { recognizeReceipt } from "./ocr.js";
+import { initializeServiceWorker } from "./cache-control.js";
 
 const app = document.querySelector("#app");
 const modalRoot = document.querySelector("#modal-root");
 const appShell = document.querySelector("#app-shell");
 const desktopGuide = document.querySelector("#desktop-guide");
 let selectedPhoto = "";
-
-function today() {
-  const date = new Date();
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
-}
 
 function getRoute() {
   const hash = window.location.hash.replace(/^#\/?/, "");
@@ -180,10 +174,6 @@ function renderForm(receipt = null) {
         <div class="photo-preview${selectedPhoto ? " has-photo" : ""}" id="photo-preview">${selectedPhoto ? `<img src="${selectedPhoto}" alt="レシート写真のプレビュー">` : ""}</div>
         <button class="photo-remove-button" id="remove-photo" type="button" ${selectedPhoto ? "" : "hidden"} aria-label="写真を削除">×</button>
       </div>
-      <div class="ocr-panel">
-        <button class="ocr-button" id="run-ocr" type="button" ${selectedPhoto ? "" : "disabled"}>画像から日付・金額を読み取る</button>
-        <p class="ocr-status" id="ocr-status" role="status" aria-live="polite"></p>
-      </div>
       <button class="register-save-button" type="submit"><span aria-hidden="true">✓</span> 保存する</button>
     </form>
   </section>`;
@@ -194,7 +184,6 @@ function renderForm(receipt = null) {
     selectedPhoto = "";
     updatePhotoPreview();
   });
-  document.querySelector("#run-ocr").addEventListener("click", runOcr);
   document.querySelector("#receipt-form").addEventListener("submit", (event) => saveForm(event, receipt));
 }
 
@@ -215,44 +204,9 @@ function handlePhotoChange(event) {
 function updatePhotoPreview() {
   const preview = document.querySelector("#photo-preview");
   const removeButton = document.querySelector("#remove-photo");
-  const ocrButton = document.querySelector("#run-ocr");
   preview.innerHTML = selectedPhoto ? `<img src="${selectedPhoto}" alt="レシート写真のプレビュー">` : "";
   preview.classList.toggle("has-photo", Boolean(selectedPhoto));
   removeButton.hidden = !selectedPhoto;
-  ocrButton.disabled = !selectedPhoto;
-}
-
-async function runOcr() {
-  const ocrButton = document.querySelector("#run-ocr");
-  const status = document.querySelector("#ocr-status");
-  const usedDateInput = document.querySelector("#used-date");
-  const amountInput = document.querySelector("#amount");
-
-  if (!selectedPhoto) {
-    return;
-  }
-
-  ocrButton.disabled = true;
-  status.textContent = "読み取り中...";
-  status.className = "ocr-status is-running";
-
-  try {
-    const result = await recognizeReceipt(selectedPhoto, (progress) => {
-      status.textContent = `読み取り中... ${progress}%`;
-    });
-    usedDateInput.value = result.usedDate;
-    amountInput.value = result.amount || "";
-    status.textContent = result.usedDate || result.amount
-      ? "読み取り結果を確認してください。必要に応じて修正できます。"
-      : "日付と合計金額を読み取れませんでした。手入力してください。";
-    status.className = "ocr-status";
-  } catch (error) {
-    status.textContent = "OCRを利用できませんでした。手入力で続けられます。";
-    status.className = "ocr-status is-error";
-    console.warn("OCR failed", error);
-  } finally {
-    ocrButton.disabled = false;
-  }
 }
 
 async function saveForm(event, existingReceipt) {
@@ -399,12 +353,18 @@ window.addEventListener("resize", () => {
   }
 });
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").catch((error) => console.warn("Service Worker registration failed", error));
+async function startApp() {
+  const shouldReload = await initializeServiceWorker();
+
+  if (shouldReload) {
+    return;
+  }
+
+  render().catch((error) => {
+    app.innerHTML = `<div class="card"><h1>読み込みエラー</h1><p class="muted">データベースを開けませんでした。ブラウザの設定を確認してください。</p></div>`;
+    console.error(error);
+  });
 }
 
-render().catch((error) => {
-  app.innerHTML = `<div class="card"><h1>読み込みエラー</h1><p class="muted">データベースを開けませんでした。ブラウザの設定を確認してください。</p></div>`;
-  console.error(error);
-});
+startApp();
 

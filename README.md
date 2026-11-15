@@ -12,6 +12,13 @@ py -m http.server 8000
 
 ブラウザで `http://localhost:8000/` を開きます。Service Workerとカメラ入力は、HTTPSまたはlocalhostで利用できます。
 
+## 開発環境と公開環境のキャッシュ動作
+
+- `localhost`、`127.0.0.1`、`[::1]`ではService Workerを新規登録しません。
+- 開発環境でこのアプリのService Workerが登録済みの場合は登録解除し、`tatekae-note-`で始まるCache Storageだけを削除します。
+- 既存のService Workerがページを制御していた場合は、無限リロードを防ぐ印を一時的に使い、一度だけ再読み込みします。IndexedDB、Local Storage、フォームデータは削除しません。
+- HTTPSなどの公開環境では、従来どおり `sw.js` を登録し、PWAのオフラインキャッシュを使用します。
+
 ## 構成
 
 - `index.html`: 画面の骨格
@@ -19,6 +26,7 @@ py -m http.server 8000
 - `js/db.js`: IndexedDBの保存・取得処理
 - `js/ui.js`: 画面描画と共通UI
 - `js/app.js`: ルーティングとイベント処理
+- `js/cache-control.js`: 開発環境と公開環境のService Worker制御
 - `sw.js`: オフラインキャッシュ
 - `manifest.webmanifest`: PWA設定
 
@@ -26,9 +34,7 @@ py -m http.server 8000
 
 ブラウザのサイトデータを削除すると、登録データと写真も失われます。端末間同期やバックアップ・復元は未実装です。
 
-## OCR
+## レシート登録
 
-レシート登録・編集画面の「画像から日付・金額を読み取る」ボタンで、レシート画像から利用日と支払合計金額だけを抽出します。OCRはブラウザ内で実行し、画像を外部サーバーへ送信しません。
-
-OCRエンジンにはTesseract.js 5.1.1を使用しています。OCR実行時にCDNから読み込むため、初回読み込み時やオフライン時はOCRが利用できない場合があります。その場合も写真添付・手入力・保存は継続できます。Tesseract.jsはApache License 2.0です。
+利用日、金額、申請名、備考は手動で入力します。写真はカメラ撮影または端末内の画像を選択して添付できます。画像はIndexedDBへ保存し、詳細画面で拡大・変更・削除できます。OCR機能は搭載していません。
 

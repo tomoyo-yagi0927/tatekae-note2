@@ -1,12 +1,12 @@
-const CACHE_NAME = "tatekae-note-v8";
+const CACHE_NAME = "tatekae-note-v9";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/app.js",
+  "./js/cache-control.js",
   "./js/db.js",
   "./js/ui.js",
-  "./js/ocr.js",
   "./manifest.webmanifest",
   "./assets/icons/icon-192.svg",
   "./assets/icons/icon-512.svg"
