@@ -32,8 +32,13 @@ function renderDesktopGuide() {
     <p class="eyebrow">タテカエNOTE</p>
     <h1>スマートフォンで、<br>立替金をかんたんに記録</h1>
     <p class="muted">このアプリはスマートフォン向けの立替金メモです。データはご利用端末のブラウザ内に保存され、他端末とは同期されません。</p>
-    <div class="qr-placeholder" aria-label="公開URL確定前のQRコード仮表示">QR準備中</div>
-    <p class="muted">公開URLが確定するまでQRコードは仮表示です。</p>
+    <div class="desktop-qr-section">
+      <h2>スマートフォンで使う</h2>
+      <p class="muted">QRコードを読み取ると、スマートフォンでタテカエNOTEを開けます。</p>
+      <a class="desktop-qr-link" href="https://tomoyo-yagi0927.github.io/tatekae-note2/" target="_blank" rel="noopener" aria-label="タテカエNOTEをスマートフォンで開く">
+        <img class="desktop-qr-image" src="assets/images/qr-tatekae-note.png" alt="タテカエNOTE公開アプリのQRコード">
+      </a>
+    </div>
     <button class="button-secondary" type="button" id="preview-on-pc">PCでUIをプレビューする</button>
   </div>`;
   desktopGuide.querySelector("#preview-on-pc").addEventListener("click", () => {
