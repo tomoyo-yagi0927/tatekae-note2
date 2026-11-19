@@ -61,14 +61,6 @@ async function renderHome() {
 
   app.innerHTML = `<section class="home-page">
     <div class="home-brand" aria-label="タテカエNOTE">
-      <div class="home-brand-main">
-        <svg class="home-receipt-icon" viewBox="0 0 48 58" aria-hidden="true">
-          <path d="M8 4h32v48l-5-4-5 4-5-4-5 4-5-4-7 4V4Z" />
-          <path d="M16 18h16M16 28h16M16 38h11" />
-        </svg>
-        <span>タテカエNOTE</span>
-      </div>
-      <span class="home-brand-line" aria-hidden="true"></span>
       <p>立て替えたお金を、かんたんに記録・管理</p>
     </div>
 
@@ -105,6 +97,8 @@ async function renderHome() {
       <strong>レシートを登録する</strong>
       <span aria-hidden="true">›</span>
     </a>
+
+    <img class="home-eyecatch" src="assets/images/eyecatch.png" alt="タテカエNOTEで立替金の管理がもっとラクになるメリット紹介">
 
     <div class="home-recent" aria-live="polite">
       ${recent.length ? `<p class="home-recent-label">最近の登録</p><div class="receipt-list">${recent.map(receiptCardTemplate).join("")}</div>` : ""}
