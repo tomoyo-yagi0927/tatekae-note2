@@ -64,6 +64,15 @@ async function renderHome() {
       <p>立て替えたお金を、かんたんに記録・管理</p>
     </div>
 
+    <a class="home-register-button" href="#/new">
+      <svg class="home-camera-icon" viewBox="0 0 48 40" aria-hidden="true">
+        <path d="M15 9 19 4h10l4 5h7c2 0 4 2 4 4v19c0 2-2 4-4 4H8c-2 0-4-2-4-4V13c0-2 2-4 4-4h7Z" />
+        <circle cx="24" cy="23" r="8" />
+      </svg>
+      <strong>レシートを登録する</strong>
+      <span aria-hidden="true">›</span>
+    </a>
+
     <div class="home-balance-card">
       <div class="home-balance-label">現在の立て替え金額（未精算の合計）</div>
       <div class="home-balance-content">
@@ -87,15 +96,6 @@ async function renderHome() {
       </svg>
       <span class="home-action-copy"><strong>登録レシート</strong><small>登録したレシートの一覧を見る</small></span>
       <span class="home-action-arrow" aria-hidden="true">›</span>
-    </a>
-
-    <a class="home-register-button" href="#/new">
-      <svg class="home-camera-icon" viewBox="0 0 48 40" aria-hidden="true">
-        <path d="M15 9 19 4h10l4 5h7c2 0 4 2 4 4v19c0 2-2 4-4 4H8c-2 0-4-2-4-4V13c0-2 2-4 4-4h7Z" />
-        <circle cx="24" cy="23" r="8" />
-      </svg>
-      <strong>レシートを登録する</strong>
-      <span aria-hidden="true">›</span>
     </a>
 
     <img class="home-eyecatch" src="assets/images/eyecatch.png" alt="タテカエNOTEで立替金の管理がもっとラクになるメリット紹介">
